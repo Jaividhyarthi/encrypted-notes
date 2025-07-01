@@ -4,40 +4,28 @@ import NoteCard from './components/NoteCard';
 import SearchBar from './components/SearchBar';
 import { encryptNote, decryptNote } from './utils/crypto';
 import { saveNote, getAllNotes, deleteNoteById } from './utils/db';
-import { useAuth } from './auth/AuthProvider';
-import Login from './auth/Login';
 
 function App() {
-  // ✅ Always call hooks first
-  const { user } = useAuth();
   const [notes, setNotes] = useState([]);
   const [text, setText] = useState('');
+  const [passphrase, setPassphrase] = useState('');
   const [decryptedNotes, setDecryptedNotes] = useState({});
   const [search, setSearch] = useState('');
 
-  const username = user?.username;
-  const passphrase = user?.passphrase;
-
-  // ✅ useEffect must not be inside any condition
+  // Load all notes on mount
   useEffect(() => {
-    if (!username) return; // safely skip until login
     const loadNotes = async () => {
       const saved = await getAllNotes();
-      const userNotes = saved.filter((n) => n.username === username);
-      setNotes(userNotes);
+      setNotes(saved);
     };
     loadNotes();
-  }, [username]);
-
-  // ✅ Only conditionally render after hooks
-  if (!user) return <Login />;
+  }, []);
 
   const addNote = async () => {
     if (!passphrase) return alert('Enter passphrase to encrypt.');
     const encrypted = encryptNote(text, passphrase);
     const newNote = {
       id: Date.now(),
-      username,
       content: encrypted,
       pinned: false,
       archived: false,
@@ -85,6 +73,7 @@ function App() {
     await saveNote(updated.find((n) => n.id === id));
   };
 
+  // Filter and sort visible notes
   const visibleNotes = notes
     .filter((n) => !n.archived)
     .filter((n) => {
@@ -113,7 +102,7 @@ function App() {
           text={text}
           setText={setText}
           passphrase={passphrase}
-          setPassphrase={() => {}} // not needed after login
+          setPassphrase={setPassphrase}
           addNote={addNote}
         />
 
